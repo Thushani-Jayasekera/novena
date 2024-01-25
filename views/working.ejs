@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/assets/fonts/icomoon/style.css">
+
+    <link rel="stylesheet" href="/assets/css/owl.carousel.min.css">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    
+    <!-- Style -->
+    <link rel="stylesheet" href="/assets/css/style.css">
+
+    <title>Working Folder</title>
+  </head>
+  <script src="https://apis.google.com/js/api.js"></script>
+  
+  <body>
+  
+
+  <div class="content">
+    
+    <div class="container">
+      <h2 class="mb-5">SUB-FOLDERS</h2>
+
+      <select name="folders" id="result">
+
+      </select>
+
+      <button id="search">Search Files</button>
+
+
+      <h2 class="mb-5" id="heading">Files</h2>
+
+      <div class="table-responsive">
+
+        <table class="table custom-table">
+          <thead>
+            <tr>
+              
+              <th scope="col">File Name</th>
+              <th scope="col">Download</th>
+              <th scope="col">Delete</th>
+              <th scope="col">Print</th>
+            </tr>
+          </thead>
+          <tbody id="result-sub">
+            
+            
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+    
+  <script>
+
+    let i = JSON.parse(localStorage.getItem("info"));
+    ACCESS_TOKEN = i.access_token;
+    
+    console.log(ACCESS_TOKEN);
+
+    let search = document.getElementById("search");
+    let result = document.getElementById('result');
+    let resultSub = document.getElementById('result-sub');
+
+    function listFolders(){
+      console.log("Folders in folder");
+      searchFolders("",70);
+    }
+
+    function listFiles(){
+      console.log("Files in sun folder");
+      searchFiles("",70);
+    }
+
+    window.onload = listFolders;
+
+    search.onclick = listFiles;
+
+    function searchFolders(q="", pageSize){
+        result.innerHTML=''
+
+        let FOLDER_ID='1NUhSUtcy1KBz-NPpB5KulI75E__Oou4F';
+
+
+        //fetch(`https://www.googleapis.com/drive/v3/files?fields=files(*)`,
+        fetch(`https://www.googleapis.com/drive/v3/files?q=%27${FOLDER_ID}%27%20in%20parents%20and%20mimeType%3D%27application%2Fvnd.google-apps.folder%27&pageSize=10&fields=nextPageToken%2C%20files(*)`,
+        {
+            method: "GET",
+            headers: new Headers({ Authorization: "Bearer " + ACCESS_TOKEN }),
+        }
+        )
+        .then(response => response.json())
+        .then(data => {
+          console.log(data);
+          var files = data.files;
+          if (files && files.length > 0) {
+            for (var i = 0; i < files.length; i++) {
+              var file = files[i];
+              console.log('Name:', file.name);
+              console.log('ID:', file.id);
+              if (file.name== 'PDP'){
+                result.innerHTML+= `<optgroup label="PDP">`;
+                fetch(`https://www.googleapis.com/drive/v3/files?q=%27${file.id}%27%20in%20parents%20and%20mimeType%3D%27application%2Fvnd.google-apps.folder%27&pageSize=10&fields=nextPageToken%2C%20files(*)`,
+                    {
+                        method: "GET",
+                        headers: new Headers({ Authorization: "Bearer " + ACCESS_TOKEN }),
+                    }
+                )
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    var subfiles = data.files;
+                    if (subfiles && subfiles.length > 0) {
+                        for (var i = 0; i < subfiles.length; i++) {
+                            var subfile = subfiles[i];
+                            result.innerHTML+= ` <option value="${subfile.id}"> ${subfile.name}</option>`;
+                        }
+                
+                    }
+                    result.innerHTML+= `</optgroup">`;
+                }).catch(error => {
+                    console.error('Error:', error);
+                });
+              }
+              else{
+                result.innerHTML += `
+                    <option value="${file.id}"> ${file.name}</option>
+                    `;
+              }
+
+            }
+          } else {
+            console.log('No files found.');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+
+
+      
+    }
+
+    function searchFiles(q="", pageSize){
+
+      var e = document.getElementById("result");
+      let FOLDER_ID  = e.value;
+      var text = e.options[e.selectedIndex].text;
+      let heading = document.getElementById("heading");
+      heading.innerHTML= text;
+
+    //let FOLDER_ID='1JjaUWUnNlW3LrGHPNnkoP97UgYyjW3bD';
+
+    resultSub.innerHTML=''
+
+    fetch(`https://www.googleapis.com/drive/v3/files?q=%27${FOLDER_ID}%27%20in%20parents&pageSize=10&fields=nextPageToken%2C%20files(*)`,
+    {
+        method: "GET",
+        headers: new Headers({ Authorization: "Bearer " + ACCESS_TOKEN }),
+    }
+    )
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      var files = data.files;
+      if (files && files.length > 0) {
+        for (var i = 0; i < files.length; i++) {
+          var file = files[i];
+          console.log('Name:', file.name);
+          console.log('ID:', file.id);
+          let id = file.id;
+
+
+          const existingFileName = file.name;
+
+          const versionMatch = existingFileName.match(/^v(\d+)/);
+          let newFileName;
+          if (versionMatch) {
+            const versionNumber = parseInt(versionMatch[1]);
+            const newVersionNumber = versionNumber + 1;
+            newFileName = existingFileName.replace(/^v\d+/, `v${newVersionNumber}`);
+        } else {
+            // If the version number is not present in the file name, append "_v1" to the file name
+            const fileExtension = existingFileName.split('.').pop();
+            const baseFileName = existingFileName.substr(0, existingFileName.lastIndexOf('.'));
+            newFileName = `${baseFileName}_v1.${fileExtension}`;
+        }
+
+
+        var text= "COPY";
+        var docDefinition ={
+            watermaek:{ text:text, color:'green', opacity:0.3, bold:true, italics:false}
+        }
+
+        
+          
+        resultSub.innerHTML += `
+            <tr>
+                <td><a target="_blank" href="https://drive.google.com/file/d/${file.id}">${file.name}</a>
+                </td>
+                <td>
+                    <a target="_blank" href="${file.webViewLink}" id="downloadLink${file.name}" onclick=
+                    "if (!${file.capabilities.canDownload}) {
+                        event.preventDefault();
+                        return false;
+                    }
+                    "
+                    >Download</a>
+                    
+                </td>
+
+
+                <td>
+                <button onclick="
+                fetch('https://www.googleapis.com/drive/v3/files/${id}',{
+                    method:'DELETE',
+                    headers:new Headers({Authorization:'Bearer ${ACCESS_TOKEN}'}),
+                })
+                .then((info) => {
+                    console.log(info)
+                    alert('file is deleted')
+                })
+                ">Delete</button>
+                </td>
+
+
+                <td>
+                <button onclick="
+                fetch('https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=application/pdf', {
+                    method: 'GET',
+                    headers: new Headers({ Authorization: 'Bearer ${ACCESS_TOKEN}' }),
+                })
+                .then((response) => {
+                    console.log(response);
+                    let charsReceived = 0;
+                    let result = '';
+                    const reader = response.body.getReader();
+                    console.log(reader);
+                });
+              
+                ">Print- To do</button>
+                </td>
+            </tr>
+            `;
+
+            var link = document.getElementById(`downloadLink${file.name}`);
+            // Add your logic to display the file names and IDs in your HTML page
+            if(file.capabilities.canDownload){
+                link.style.color='blue';
+            } else {
+                link.style.color='red';
+            }
+
+
+        }
+      } else {
+        console.log('No files found.');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+
+    }
+
+
+  </script>
+
+    <script src="/assets/js/jquery-3.3.1.min.js"></script>
+    <script src="/assets/js/popper.min.js"></script>
+    <script src="/assets/js/bootstrap.min.js"></script>
+    <script src="/assets/js/main.js"></script>
+  </body>
+</html>
